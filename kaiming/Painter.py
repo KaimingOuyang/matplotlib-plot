@@ -2,9 +2,9 @@ import sys
 import numpy as np
 import matplotlib.pyplot as pyplot
 from LineChart import LineChart
-from LineChart import LineFormat
+from LineChart import LineData
 from BarChart import BarChart
-from BarChart import BarFormat
+from BarChart import BarData
 
 
 def clean_head_tail_line(strline):
@@ -72,9 +72,9 @@ class Painter:
         self.outputfile = outputfile
         self.ysecondary = None
         self.chart = None
-        self.next_ax = None
+        self.next = None
         self.legends = []
-        self.title = ""
+        self.title = None
         self.xformat = AxisFormat(minorticks_on=False)
         self.yformat = AxisFormat(minorticks_on=True)
         self.delimiter = "\t"
@@ -98,7 +98,7 @@ class Painter:
         self.title = clean_head_tail_line(self.file.readline())
     def assign_position(self):
         # x, y, index
-        pos = [int(n) for n in clean_head_tail_line(self.file.readline()).split(self.delimiter)]    
+        pos = [int(n) for n in clean_head_tail_line(self.file.readline()).split(self.delimiter)]
         if pos[0] != 1 or pos[1] != 1:
             pyplot.subplot(pos[0], pos[1], pos[2])
         self.ax = pyplot.gca()
@@ -121,13 +121,13 @@ class Painter:
     def add_line(self):
         linelabel = clean_head_tail_line(self.file.readline())
         data = [float(x) for x in clean_head_tail_line(self.file.readline()).split(self.delimiter)]
-        line = LineFormat(data, linelabel)
+        line = LineData(data, linelabel)
         self.data.append(line)
 
     def add_bar(self):
         barlabel = [clean_head_tail_line(self.file.readline())]
         data = [[float(x) for x in clean_head_tail_line(self.file.readline()).split(self.delimiter)]]
-        bar = BarFormat(data, barlabel)
+        bar = BarData(data, barlabel)
         self.data.append(bar)
 
     def add_stackbar(self):
@@ -137,7 +137,7 @@ class Painter:
         for i in range(0, num_stack):
             barlabel.append(clean_head_tail_line(self.file.readline()))
             data.append([float(x) for x in clean_head_tail_line(self.file.readline()).split(self.delimiter)])
-        bar = BarFormat(data, barlabel)
+        bar = BarData(data, barlabel)
         self.data.append(bar)
 
     def set_barwidth(self):
@@ -148,8 +148,8 @@ class Painter:
 
     def set_ysecondary(self):
         self.ysecondary = clean_head_tail_line(self.file.readline())
-    def set_next_ax(self):
-        self.next_ax = clean_head_tail_line(self.file.readline())
+    def set_next(self):
+        self.next = clean_head_tail_line(self.file.readline())
     def set_yscale(self):
         self.yformat.scale = clean_head_tail_line(self.file.readline())
 
@@ -173,8 +173,11 @@ class Painter:
         self.paint_funcs["figsize"] = self.set_figsize
 
         self.paint_funcs["ysecondary"] = self.set_ysecondary
-        self.paint_funcs["next_ax"] = self.set_next_ax
+        self.paint_funcs["next"] = self.set_next
 
+    def show_legends(self, legends, ax):
+        labels = [lgd.get_label() for lgd in legends]
+        ax.legend(legends, labels, loc='best', fancybox=True, fontsize = 1.2 * get_default_fontsize(), ncol = self.legend_ncol, framealpha=1).get_frame().set_linewidth(0.0)
     def parse_inputfile(self, inputfile):
         filename = inputfile
         while True:
@@ -189,49 +192,35 @@ class Painter:
                     break
 
             # plot figure
-            self.ax.set_title(self.title)
-            self.chart.plot(self.data, self.xformat, self.yformat, self.ax)
-            self.ax.legend(loc='best', fancybox=True, fontsize = 1.2 * get_default_fontsize(), ncol = self.legend_ncol, framealpha=1)
+            if self.title != None:
+                self.ax.set_title(self.title)
+            self.legends = self.legends + self.chart.plot(self.data, self.xformat, self.yformat, self.ax)
         
             # release obj
             self.file.close()
 
-            if self.next_ax != None:
-                filename = self.next_ax
+            if self.next != None:
+                filename = self.next
                 del self.xformat
                 del self.yformat
                 del self.chart
-                self.next_ax = None
-                self.chart = None
-                self.legends = []
-                self.title = ""
                 self.xformat = AxisFormat(minorticks_on=False)
                 self.yformat = AxisFormat(minorticks_on=True)
-            if self.ysecondary != None:
+                self.show_legends(self.legends, self.ax)
+                self.legends = []
+                self.next = None
+                self.chart = None
+                self.title = None
+            elif self.ysecondary != None:
                 filename = self.ysecondary
-                self.ax = self.ax.secondary_yaxis(loc="left")
+                del self.yformat
+                self.ax = self.ax.twinx()
+                self.yformat = AxisFormat(minorticks_on=True)
                 self.ysecondary = None
+                self.title = None
             else:
                 break
-        #         elif command == "ysecondary":
-        #             ysec_axis = pyplot.twinx()
-        #             line_num = int(data_file.readline()[1:-1])
-        #             for i in range(0, line_num):
-        #                 command = data_file.readline()[1:-1]
-        #                 if command == "line":
-        #                     label = data_file.readline()[2:-1]
-        #                     data = [float(yvalue) for yvalue in data_file.readline()[2:-1].split()]
-        #                     marker = get_default_markers(self.line_cnt)
-        #                     color = get_default_colors(self.line_cnt)
-        #                     self.line_cnt += 1
-        #                     ysec_axis.plot(data, label = label, marker = marker, linewidth = 1.5, markersize = 3.0, color = color)
-        #                 elif command == "ytitle":
-        #                     ysec_axis.set_ylabel(data_file.readline()[2:-1])
-        #             ysec_axis.legend(loc = (.38, 1.01), fancybox=True, fontsize = 1.8 * get_default_fontsize(), ncol = 2, framealpha=0.0)
-        #         else:
-        #             print("Command %s is not defined yet" % command)
-        #     else:
-        #         break
+        self.show_legends(self.legends, self.ax)
 
     def print_figure(self):
         pyplot.savefig(self.outputfile + ".pdf", bbox_inches='tight', pad_inches = cm2in(0.1), dpi = 160, transparent = True)

@@ -47,7 +47,7 @@ def get_default_colors(index):
     colors.append((0.647, 0.647, 0.647))
     return colors[index % len(colors)]
 
-class BarFormat:
+class BarData:
     def __init__(self, data, barlabel):
         self.data = data
         self.barlabel = barlabel
@@ -59,6 +59,7 @@ class BarChart:
         self.grid_dashes = (0.5, 0.5)
         self.barwidth = 0.4
         self.linewidth = 0.8
+        self.legends = []
 
     def plot(self, databars, xformat, yformat, ax, **kwargs):
         num_bars = len(databars)
@@ -71,11 +72,17 @@ class BarChart:
             ax.set_xlabel(xformat.axis_label)
 
         # set y axis
-        if yformat.minorticks_on == True:
-            ax.yaxis.set_minor_locator(AutoMinorLocator())
         if yformat.grid_on == True:
             ax.yaxis.grid(which = 'major', linestyle = '--', linewidth = self.grid_linewidth, dashes = self.grid_dashes)
-        
+        if yformat.minorticks_on == True:
+            ax.yaxis.set_minor_locator(AutoMinorLocator())
+        if yformat.scale == "log":
+            ax.set_yscale('log')
+        if yformat.label_on == True:
+            ax.set_ylabel(yformat.axis_label)
+        if yformat.min_value != yformat.max_value:
+            ax.set_ylim(yformat.min_value, yformat.max_value)
+            
         if num_bars % 2 == 0:
             shift_base = self.barwidth / 2 + point_to_inch(self.linewidth) / 2.0
         else:
@@ -84,7 +91,8 @@ class BarChart:
             shift = (i - int(num_bars / 2)) * (self.barwidth + point_to_inch(self.linewidth)) + shift_base
             for j in range(0, len(databars[i].data)):
                 if j == 0:
-                    ax.bar(np.arange(len(databars[i].data[j])) + shift, databars[i].data[j], width = self.barwidth, align="center", linewidth = self.linewidth, label = databars[i].barlabel[j], hatch = get_default_hatches(self.bar_cnt), color = "w", edgecolor=get_default_colors(self.bar_cnt))
+                    self.legends.append(ax.bar(np.arange(len(databars[i].data[j])) + shift, databars[i].data[j], width = self.barwidth, align="center", linewidth = self.linewidth, label = databars[i].barlabel[j], hatch = get_default_hatches(self.bar_cnt), color = "w", edgecolor=get_default_colors(self.bar_cnt)))
                 else:
-                    ax.bar(np.arange(len(databars[i].data[j])) + shift, databars[i].data[j], width = self.barwidth, align="center", linewidth = self.linewidth, label = databars[i].barlabel[j], hatch = get_default_hatches(self.bar_cnt), color = "w", edgecolor=get_default_colors(self.bar_cnt), bottom = databars[i].data[j - 1])
+                    self.legends.append(ax.bar(np.arange(len(databars[i].data[j])) + shift, databars[i].data[j], width = self.barwidth, align="center", linewidth = self.linewidth, label = databars[i].barlabel[j], hatch = get_default_hatches(self.bar_cnt), color = "w", edgecolor=get_default_colors(self.bar_cnt), bottom = databars[i].data[j - 1]))
                 self.bar_cnt += 1
+        return self.legends
