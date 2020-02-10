@@ -1,24 +1,33 @@
 import math
-import matplotlib.pyplot as mtplot
-import matplotlib.ticker as ticker
-from matplotlib.ticker import MultipleLocator as mtlocator
+from matplotlib.ticker import AutoMinorLocator
 
-def get_color_list():
+# def get_color_list():
+#     colors = []
+#     colors.append("#5B9BD5") # blue
+#     colors.append("#ED7D31") # orange
+#     colors.append("#70AD47") # green
+#     colors.append("#FFC000") # brown
+#     colors.append("#800080") # purple
+#     colors.append("#FF0266") # red
+#     colors.append("#F08080") # pink
+#     colors.append("#59B8CC") # light blue
+#     colors.append("#E59400") # dark orange
+#     colors.append("#DAA520") # dark yellow
+#     return colors
+
+def get_default_colors(index):
     colors = []
-    colors.append("#5B9BD5") # blue
-    colors.append("#ED7D31") # orange
-    colors.append("#FFDE03") # yellow
-    colors.append("#70AD47") # green
-    colors.append("#FFC000") # brown
-    colors.append("#800080") # purple
-    colors.append("#FF0266") # red
-    colors.append("#F08080") # pink
-    colors.append("#59B8CC") # light blue
-    colors.append("#E59400") # dark orange
-    colors.append("#DAA520") # dark yellow
-    return colors
+    colors.append((0.266, 0.447, 0.768))
+    colors.append((0.929, 0.490, 0.192))
+    colors.append((1.000, 0.752, 0.000))
+    colors.append((0.356, 0.607, 0.835))
+    colors.append((0.439, 0.678, 0.278))
+    colors.append((0.149, 0.266, 0.470))
+    colors.append((0.619, 0.282, 0.054))
+    colors.append((0.647, 0.647, 0.647))
+    return colors[index % len(colors)]
 
-def get_marker_list():
+def get_default_marker(index):
     markers = []
     markers.append("o")
     markers.append("x")
@@ -34,54 +43,62 @@ def get_marker_list():
     markers.append(">")
     markers.append("*")
     markers.append("d")
-    return markers
+    return markers[index % len(markers)]
 
 class LineFormat:
-    line_index = 0
     def __init__(self, data, linelabel):
         self.data = data
         self.linelabel = linelabel
         self.linewidth = 0.3
         self.markersize = 3.0
 
-class LineChartObj:
-    def plot(self, datalines, xformat, yformat, ax, **kwargs):
+class LineChart:
+    def plot(self, datalines, xformat, yformat, ax):
         # set x axis
         ax.set_xticks(range(0, len(xformat.tick_label)))
         ax.set_xticklabels(xformat.tick_label)
         for tick in ax.get_xticklabels():
             tick.set_rotation(xformat.rotation)
+        if xformat.minorticks_on == True:
+            ax.xaxis.set_minor_locator(AutoMinorLocator())
         if xformat.grid_on == True:
             ax.xaxis.grid(which = 'major', linestyle = '--', linewidth = self.grid_linewidth, dashes = self.grid_dashes)
-        if xformat.minorticks_on == True:
-            ax.tick_params(axis = 'x', which = 'minor', bottom = False, top = False)
+        # if xformat.minorticks_on == True:
+        #     ax.tick_params(axis = 'x', which = 'minor', bottom = False, top = False)
         if xformat.label_on == True:
             ax.set_xlabel(xformat.axis_label)
 
         # set y axis
         if yformat.grid_on == True:
             ax.yaxis.grid(which = 'major', linestyle = '--', linewidth = self.grid_linewidth, dashes = self.grid_dashes)
-        if yformat.minorticks_on == True:
-            ax.tick_params(axis = 'y', which = 'minor', left = False, right = False)
 
-        if yformat.scale == "linear":
-            ax.set_yticks([yformat.min_value + y * yformat.tick_num for y in range(0, int((yformat.max_value - yformat.min_value) / yformat.tick_num + 1))])
-        elif yformat.scale == "log":
-            ax.set_yicks([2 ** y  for y in range(int(math.floor(math.log2(yformat.min_value))), int(math.ceil(math.log2(data.yaxis_format.max_value))))])
+        if yformat.minorticks_on == True:
+            ax.yaxis.set_minor_locator(AutoMinorLocator())
+            # ax.tick_params(axis = 'y', which = 'minor', left = True, right = True)
+
+        if yformat.scale == "log":
+            ax.set_yscale('log')
 
         if yformat.label_on == True:
             ax.set_ylabel(yformat.axis_label)
 
+        if yformat.min_value != yformat.max_value:
+            ax.set_ylim(yformat.min_value, yformat.max_value)
+        # if yformat.scale == "linear":
+        #     ax.set_yticks([yformat.min_value + y * yformat.tick_num for y in range(0, int((yformat.max_value - yformat.min_value) / yformat.tick_num + 1))])
+        # elif yformat.scale == "log":
+        #     ax.set_yicks([2 ** y  for y in range(int(math.floor(math.log2(yformat.min_value))), int(math.ceil(math.log2(data.yaxis_format.max_value))))])
+
         # draw the lines
         for i in range(0, len(datalines)):
-            ax.plot(datalines[i].data, label = datalines[i].linelabel, marker = self.markers[i], linewidth = datalines[i].linewidth, markersize = datalines[i].markersize, color = self.colors[i])
+            ax.plot(datalines[i].data, label = datalines[i].linelabel, marker = get_default_markers(self.linecnt), linewidth = datalines[i].linewidth, markersize = datalines[i].markersize, color = get_default_colors(self.linecnt))
+            self.linecnt += 1
 
     def __init__(self):
         # init line style
         self.colors = get_color_list()
         self.markers = get_marker_list()
-        self.xformat = None
-        self.yformat = None
+        self.linecnt = 0
         self.grid_linewidth = 0.2
         self.grid_dashes = (0.5, 0.5)
         # self.figure = mtplot.figure(figsize=self.figsize, dpi = 160, facecolor = 'w', edgecolor = 'k')
@@ -95,7 +112,7 @@ class LineChartObj:
         # mtplot.axes().set_yscale("log", basey=2)
         # mtplot.minorticks_on()
         # mtplot.axes().yaxis.set_minor_locator(ticker.AutoMinorLocator())
-        mtplot.grid(axis='y', which = 'major', linestyle = '--', linewidth = 0.2, dashes = (0.5, 0.5)) 
+        # mtplot.grid(axis='y', which = 'major', linestyle = '--', linewidth = 0.2, dashes = (0.5, 0.5)) 
 
 
     def parse_data_file(self, data_file, x, y, index):
